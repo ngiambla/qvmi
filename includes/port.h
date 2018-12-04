@@ -11,16 +11,21 @@
 
 class Port {
 	private:
-		std::string in_width;
-		std::string out_width;
-		std::string inout_width;
 		std::string port_name;
-
+		std::string width;
+		std::string type;
+		int typeId;
 	public:
-		Port(std::string port_name, std::string in_width, std::string out_width);
-		std::string getInWidth();
-		std::string getOutWidth();
-		std::string getInoutWidth();
+		Port(std::string port_name, std::string width, int type);
+		std::string getName();
+		std::string getWidth();
+		std::string getType();
+		int getTypeId();
+   		enum TYPES { 
+						IN,
+						OUT,
+						INOUT
+					};
 
 };
 

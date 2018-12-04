@@ -9,21 +9,22 @@
 #include <regex>
 #include <algorithm>
 #include <unordered_map>
-#include <iostream> 
+#include <iostream>
+#include <fstream>
 #include <assert.h>     /* assert */
 
 class Parser {
 	private:
 		std::string filename;
-		std::unordered_map<std::string, Module *> modules_inputs;
+		std::unordered_map<std::string, Module *> modules;
 		std::vector<std::string> vfile;
 
 		std::string extractModNameFromDef(std::string moddef);
 		std::vector<std::string> extractPortsFromDef(std::string moddef);
 		std::vector<Port *> generatePortsFromDeclaration(std::vector<std::string> port_names);
-		std::string getPortWidth(std::string port_type, std::string port_name);
+		std::string getPortWidth(std::string port_name);
 		Port * generatePortFromModule(std::string port_name, std::string mod);
-
+		std::string isolatePortNameFromVerilog2001Declaration(std::string port_name);
 	public:
 		Parser();
 		bool parse(std::string filename);

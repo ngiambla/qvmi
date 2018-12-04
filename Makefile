@@ -8,7 +8,7 @@ SRC = source
 INC = -Iincludes
 CFLAGS += -std=c++11
 
-_OBJS = module.o parser.o qvmi.o
+_OBJS = module.o parser.o qvmi.o port.o
 OBJS = $(patsubst %,$(BIN)/%,$(_OBJS))
 
 $(shell mkdir -p $(BIN))

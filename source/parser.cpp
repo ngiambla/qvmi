@@ -1,15 +1,14 @@
 #include "parser.h"
 
-
 Parser::Parser() {
 	this->filename = "";
-	this->modules_inputs.clear();
+	this->modules.clear();
 	this->vfile.reserve(100*sizeof(std::string));
 }
 
 
 Module * Parser::getModule(std::string mod_name) {
-	Module * M = modules_inputs[mod_name];
+	Module * M = modules[mod_name];
 	assert(M);
 	return M;
 }
@@ -81,45 +80,84 @@ std::vector<std::string> Parser::extractPortsFromDef(std::string moddef) {
 }
 
 
-std::string Parser::getPortWidth(std::string port_type, std::string port_name) {
-	size_t pos = 0, l1=0, l2=0;
+std::string Parser::getPortWidth(std::string port_name) {
+	size_t l1=0, l2=0;
 
 	std::string sbdl = "[";
 	std::string sbdr = "]";	
 	std::string token;
 
 	if ( (l1 = port_name.find(sbdl)) !=std::string::npos ) {
-		if( (l2 = port_name.find(sbdr)) !=std::string::npos ) {
-			return port_name.substr(l1, l2);
-		} else {
-			return "[0:0]";
-		}
+		token = port_name.substr(l1, std::string::npos);
+	} else {
+		return "[0:0]";
+	} 
+	if( (l2 = token.find(sbdr)) !=std::string::npos ) {
+		return token.substr(0, l2+1);
 	} else {
 		return "[0:0]";
 	}
 }
 
+std::string Parser::isolatePortNameFromVerilog2001Declaration(std::string port_name) {
+	size_t l2=0;
+
+	if( (l2 = port_name.find("]")) !=std::string::npos ) {
+		return port_name.substr(l2+1, std::string::npos);
+	}
+	if( (l2 = port_name.find("input")) !=std::string::npos ) {
+		return port_name.substr(l2, std::string::npos);
+	}
+	if( (l2 = port_name.find("output")) !=std::string::npos ) {
+		return port_name.substr(l2, std::string::npos);
+	}		
+	if( (l2 = port_name.find("inout")) !=std::string::npos ) {
+		return port_name.substr(l2, std::string::npos);
+	}	
+	return port_name;
+
+}
+
 std::vector<Port *> Parser::generatePortsFromDeclaration(std::vector<std::string> port_names) {
+
 	std::vector<std::string> port_types = {"input", "output", "inout"};
+	std::vector<int> port_type_idx;
+
+	std::unordered_map<std::string, int> port_type_map = { 	{"input", Port::IN},
+															{"output", Port::OUT},
+															{"inout", Port::INOUT}
+														};
 	std::vector<Port *> ports;
 	std::string port_name;
 	size_t list_idx = 0;
-	int current_port = 0;
 
-	// while(current_port < port_names.size()) {
-	// 	port_name = port_names[current_port];
-	// 	for(auto port_type : port_types) {
-	// 		if( (list_idx = port_name.find(port_type)) != std::string::npos) {
-	// 				std::string width = getPortWidth(port_type, port_name);
-	// 				//std::cout << "Width is "<< width << "\n";
-	// 		}
-	// 	port_name = port_names[current_port];			
-	// 		while((port_name.find(port_type)) != std::string::npos && current_port < port_names.size())
+	int current_port, inferred_port=0;
 
-	// 	}
-	// 	break;
+	for(int i = 0; i < port_names.size(); ++i) {
 
-	// }
+		if(port_names[i].find("input") != std::string::npos) {
+			port_type_idx.push_back(Port::IN);
+		} else if(port_names[i].find("output") != std::string::npos) {
+			port_type_idx.push_back(Port::OUT);
+		} else if(port_names[i].find("inout") != std::string::npos) {
+			port_type_idx.push_back(Port::INOUT);
+		} else {
+			port_type_idx.push_back(-1);
+		}
+
+	}
+
+	int hold = -1;
+	for(int i = 0; i < port_names.size(); ++i) {
+		if(port_type_idx[i] != hold && port_type_idx[i] != -1) {
+			hold = port_type_idx[i];
+		}
+		if(hold != -1) {
+			std::string width = getPortWidth(port_names[i]);
+			ports.push_back(new Port(isolatePortNameFromVerilog2001Declaration(port_names[i]), width, hold));	
+		}
+	}
+
 	return ports;
 
 }
@@ -135,11 +173,21 @@ Port * Parser::generatePortFromModule(std::string port_name, std::string mod) {
 	std::string port_found="";
 	
 	while (std::regex_search (mod, portmatch, regx____in)) {
-		for(auto x : portmatch)
-			std::cout << x << "\n";
-		break;
-		//mod = portmatch.suffix().str();		
-	}	
+		for(auto x : portmatch) {
+			return new Port(port_name, getPortWidth(x.str()), Port::IN);
+		}
+	}
+	while (std::regex_search (mod, portmatch, regx___out)) {
+		for(auto x : portmatch) {
+			return new Port(port_name, getPortWidth(x.str()), Port::OUT);			
+		}
+	}
+	while (std::regex_search (mod, portmatch, regx_inout)) {
+		for(auto x : portmatch) {
+			return new Port(port_name, getPortWidth(x.str()), Port::INOUT);			
+		}	
+	}
+
 	return NULL;
 }
 
@@ -180,13 +228,25 @@ bool Parser::parse(std::string filename) {
 				
 				if(module_found != "") {
 					std::string modulename = extractModNameFromDef(module_found);
-					std::cout << "Module: " << modulename << "\n";
 					std::vector<std::string> port_names = extractPortsFromDef(module_found);
 					std::vector<Port *> ports = generatePortsFromDeclaration(port_names);
 
 					for(int j = 0; j < port_names.size(); ++j) {
-						ports.push_back(generatePortFromModule(port_names[j], moduledef));
+						Port * P = generatePortFromModule(port_names[j], moduledef);
+						if(P != NULL) {
+							ports.push_back(P);
+						} 
 					}
+
+					// std::cout << "Module: " << modulename << "\n";
+					// for(int j = 0; j < ports.size(); ++j) {
+					// 	std::cout << "+Port ~ "<< ports[j]->getName() << "\n";
+					// 	std::cout << "+-----[Width ] "<< ports[j]->getWidth() << "\n";
+					// 	std::cout << "+-----[Type  ] "<< ports[j]->getType() << "\n";
+					// 	std::cout << "+-----[TypeId] "<< ports[j]->getTypeId() << "\n";
+
+					// }
+					modules[modulename] = new Module(modulename, ports);
 
 				}
 
@@ -194,7 +254,6 @@ bool Parser::parse(std::string filename) {
 			}
 		}
 		if(is_recording) {
-			//::cout << vfile[i] << "\n";
 			moduledef += vfile[i] + "\n";
 		}
 	}
