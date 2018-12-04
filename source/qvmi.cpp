@@ -27,11 +27,13 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 	dut_out += "// Inputs and Registers\n";
 	for(int i = 0; i < M->getInputPorts().size(); ++i) {
 		Port * P = M->getInputPorts()[i];
-		dut_out += P->getType() + " " + P->getWidth() + " " + P->getName() + ";\n";
-		if(P->getName() != "clk" && P->getName() != "clock")
+		if(P->getName() != "clk" && P->getName() != "clock") {
+			dut_out += P->getType() + " " + P->getWidth() + " " + P->getName() + ";\n";
 			dut_out += "reg" + P->getWidth() + " " + P->getName() + "_reg;\n";
-		else
+		} else {
 			clkPort = P;
+			dut_out += P->getType() + " " + P->getName() + ";\n";			
+		}
 	}
 
 	dut_out += "\n// Outputs, Registers & Wires\n";
