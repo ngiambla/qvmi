@@ -90,12 +90,12 @@ std::string Parser::getPortWidth(std::string port_name) {
 	if ( (l1 = port_name.find(sbdl)) !=std::string::npos ) {
 		token = port_name.substr(l1, std::string::npos);
 	} else {
-		return "[0:0]";
+		return "";
 	} 
 	if( (l2 = token.find(sbdr)) !=std::string::npos ) {
 		return token.substr(0, l2+1);
 	} else {
-		return "[0:0]";
+		return "";
 	}
 }
 
@@ -166,12 +166,22 @@ Port * Parser::generatePortFromModule(std::string port_name, std::string mod) {
 
 	std::smatch portmatch;
 
-	std::regex regx____in("input([^;\\)]*)"  +port_name+";");
-	std::regex regx___out("output([^;\\)]*)"  +port_name+";");
-	std::regex regx_inout("inout([^;\\)]*)"  +port_name+";");
-	
-	std::string port_found="";
-	
+
+	std::string::iterator end_pos = std::remove(port_name.begin(), port_name.end(), '\t');
+	port_name.erase(end_pos, port_name.end());		
+	end_pos = std::remove(port_name.begin(), port_name.end(), '\n');
+	port_name.erase(end_pos, port_name.end());
+	end_pos = std::remove(port_name.begin(), port_name.end(), ' ');
+	port_name.erase(end_pos, port_name.end());
+
+	std::regex regx____in("input(\\s+)(reg)?(wire)?(\\s*)(\\[[^;]*\\])?(\\s*)"+port_name+";");
+	std::regex regx___out("output(\\s+)(reg)?(wire)?(\\s*)(\\[[^;]*\\])?(\\s*)"+port_name+";");
+	std::regex regx_inout("inout(\\s+)(reg)?(wire)?(\\s*)(\\[[^;]*\\])?(\\s*)"+port_name+";");
+		
+	if(port_name == "") {
+		return NULL;
+	}
+
 	while (std::regex_search (mod, portmatch, regx____in)) {
 		for(auto x : portmatch) {
 			return new Port(port_name, getPortWidth(x.str()), Port::IN);
@@ -187,6 +197,9 @@ Port * Parser::generatePortFromModule(std::string port_name, std::string mod) {
 			return new Port(port_name, getPortWidth(x.str()), Port::INOUT);			
 		}	
 	}
+
+	std::cout << "  [WARNING] Couldn't find: "<<port_name << "\n";
+	std::cout << mod;
 
 	return NULL;
 }
@@ -215,7 +228,7 @@ bool Parser::parse(std::string filename) {
 			is_recording = !is_recording;
 			if(is_recording) {
 			} else {
-				moduledef += "endmodule";
+				moduledef += "endmodule\n";
 				std::cout << "  [PARSER] - Module Found.\n";
 				std::smatch modulematch;
 				std::regex regx("module([^)]*)\\);");
@@ -237,7 +250,6 @@ bool Parser::parse(std::string filename) {
 							ports.push_back(P);
 						} 
 					}
-
 					// std::cout << "Module: " << modulename << "\n";
 					// for(int j = 0; j < ports.size(); ++j) {
 					// 	std::cout << "+Port ~ "<< ports[j]->getName() << "\n";
@@ -246,6 +258,8 @@ bool Parser::parse(std::string filename) {
 					// 	std::cout << "+-----[TypeId] "<< ports[j]->getTypeId() << "\n";
 
 					// }
+					// std::string line;
+					// std::getline(std::cin, line);
 					modules[modulename] = new Module(modulename, ports);
 
 				}
