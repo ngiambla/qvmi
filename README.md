@@ -47,6 +47,13 @@ Literally, just head to the top level directory of this repository and type:
 make;
 ```
 
+If you'd like to rebuild this project, you can issues these commands:
+
+```bash
+make clean;      # Cleans bin + exe 
+make cleanut;    # Cleans generate *_dut.v files in the unittests folder
+```
+
 Should be good to go! If there is an issue, just issue a bug~ (I will fix it... when I have free time!)
 
 ## Usage
@@ -54,13 +61,13 @@ Should be good to go! If there is an issue, just issue a bug~ (I will fix it... 
 To use QVMI just issue the following command:
 
 ```
-./qvmi /path/to/a/verilogfile.v theModuleToIsolate
+./qvmi /path/to/a/verilogfile.v aModuleToIsolate,AndPossiblyAnotherModules,And...
 ```
 
 This will:
 
 1.  Locate `verilogfile.v`, interpret all modules (as long as the syntax is good)
-2.  From all modules in `verilogfile.v`, QVMI attempts to fetch `theModuleToIsolate`
+2.  From all modules listed in the command line option (1 is still fine), each module is parsed for the required informaion
 3.  If Step 2 was successful, an wrapper is generated and the `theModuleToIsolate` is isolated and saved in the same directory as `verilogfile.v` and is saved as `theModuleToIsolate_dut.v`
 4.  Else, you'll just error out (...)
 
