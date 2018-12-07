@@ -19,12 +19,17 @@ class Parser {
 		std::unordered_map<std::string, Module *> modules;
 		std::vector<std::string> vfile;
 
+		// Utility Methods
+		std::string isolatePortNameFromVerilog2001Declaration(std::string port_name);
+		std::string getPortWidth(std::string port_name);
+		std::string ReplaceAll(std::string &str, const std::string &from, const std::string &to);
 		std::string extractModNameFromDef(std::string moddef);
+		std::vector<Parameter *> extractParametersFromDef(std::string moddef);
+		std::vector<Parameter *> extractParametersFromDefInternal(std::string moddef);
 		std::vector<std::string> extractPortsFromDef(std::string moddef);
 		std::vector<Port *> generatePortsFromDeclaration(std::vector<std::string> port_names);
-		std::string getPortWidth(std::string port_name);
 		Port * generatePortFromModule(std::string port_name, std::string mod);
-		std::string isolatePortNameFromVerilog2001Declaration(std::string port_name);
+
 	public:
 		Parser();
 		bool parse(std::string filename);

@@ -7,10 +7,20 @@ enum STATUS{SUCCESS, FAIL, ERROR};
 
 std::string QVMI::generateDUTWrapper(Module * M) {
 	
-	std::string dut_out = "module ";
+	std::string dut_out = ""; 
 
 	std::cout 	<< "Generating Wrapper for:\n"
 				<< "  Module: " << M->getName() << "\n";
+
+	if(M->getParameters().size() > 0)
+		dut_out += "//Parameters for Module\n\n";
+	for(int i = 0; i < M->getParameters().size(); ++i) {
+		dut_out += "`define "+M->getParameters()[i]->getName() + " " + M->getParameters()[i]->getOperand() + "\n";
+	}
+	if(M->getParameters().size() > 0)
+		dut_out += "\n";
+
+	dut_out += "module ";
 
 	dut_out += M->getName() + "_ut (\n";
 	for(int i = 0; i < M->getPorts().size(); ++i) {
@@ -108,10 +118,14 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 
 
 int main(int argc, char * argv[]) {
-	size_t pos = 0;
+	size_t list_idx = 0, pos = 0;
 	std::string filename;
-	std::string dir ="";
-	std::string module;
+	std::string dir 			= "";
+	std::string module 			= "";
+	std::string modules_list 	= "";
+	std::string list_a_delim 	= ",";
+
+	std::vector<std::string> modules;
 
 	for(int i = 1; i < argc; ++i) {
 		std::string arg = argv[i];		
@@ -126,27 +140,36 @@ int main(int argc, char * argv[]) {
 		exit(FAIL);
 	}
 
-	filename 	= argv[1];
-	module 		= argv[2];
+	filename 		= argv[1];
+	modules_list 	= argv[2];
+
+	while((list_idx = modules_list.find(list_a_delim)) != std::string::npos) {
+		module = modules_list.substr(0, list_idx);
+		modules.push_back(module);
+		modules_list.erase(0, list_idx+list_a_delim.length());
+	}
+	modules.push_back(modules_list);	
 
 	Parser * P = new Parser();
+	QVMI * qvmi = new QVMI();
 
 	if(P->parse(filename)) {
-		// Generate verilog DUT for Module.
-		Module * M = P->getModule(module);
-		if(M == NULL) {
-			std::cout << "Module does not exist within " << filename << ". Exiting.\n";
-			return ERROR;
-		}
-		QVMI * qvmi = new QVMI();
-		std::string dut_file_cont = qvmi->generateDUTWrapper(M);
-		std::ofstream dut_file;
-		if((pos =filename.rfind("/")) != std::string::npos) {
-			dir = filename.substr(0, pos);
-		}
-		dut_file.open (dir+"/"+M->getName()+"_dut.v");
-		dut_file << dut_file_cont;
-		dut_file.close();		
+		// Generate verilog DUT for Module List.
+		for(std::string module : modules) {
+			Module * M = P->getModule(module);
+			if(M == NULL) {
+				std::cout << "Module does not exist within " << filename << ". Exiting.\n";
+				return ERROR;
+			}
+			std::string dut_file_cont = qvmi->generateDUTWrapper(M);
+			std::ofstream dut_file;
+			if((pos =filename.rfind("/")) != std::string::npos) {
+				dir = filename.substr(0, pos);
+			}
+			dut_file.open (dir+"/"+M->getName()+"_dut.v");
+			dut_file << dut_file_cont;
+			dut_file.close();
+		}		
 		
 	} else {
 		std::cout << "File does not exist. Exiting.\n";

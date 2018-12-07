@@ -1,8 +1,10 @@
 #include "module.h"
 
-Module::Module(std::string name, std::vector<Port *> ports) {
-	this->name 		= name;
-	this->ports 	= ports;
+Module::Module(std::string name, std::vector<Port *> ports, std::vector<Parameter *> parameters) {
+	this->name 			= name;
+	this->ports 		= ports;
+	this->parameters 	= parameters;
+
 	for(int i = 0; i < ports.size(); ++i) {
 		if(ports[i]->getTypeId() == Port::IN) {
 			this->input_ports.push_back(ports[i]);
@@ -34,4 +36,8 @@ std::vector<Port *> Module::getOutputPorts() {
 
 std::vector<Port *> Module::getInoutPorts() {
 	return this->inout_ports;
+}
+
+std::vector<Parameter *> Module::getParameters() {
+	return this->parameters;
 }

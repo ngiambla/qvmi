@@ -14,31 +14,155 @@ Module * Parser::getModule(std::string mod_name) {
 }
 
 std::string Parser::extractModNameFromDef(std::string moddef) {
-	std::string brac_delim = "(";
-	std::string mod__delim = "module";
-
+	std::string brac__delim = "(";
+	std::string mod___delim = "module";
+	std::string pound_delim = "#";
 	size_t pos = 0;	
-	std::string token;
+	std::string token = "";
 	std::string modname;
 
-	while ((pos = moddef.find(brac_delim)) != std::string::npos) {
+	if ((pos = moddef.find(pound_delim)) != std::string::npos) {
 	    token = moddef.substr(0, pos);
-	    break;
+	    goto FETCH_MODNAME;
 	}
 
-	if( (pos = token.find(mod__delim)) !=std::string::npos) {
-		modname = token.erase(0, pos+mod__delim.length());
-		std::string::iterator end_pos = std::remove(modname.begin(), modname.end(), ' ');
-		modname.erase(end_pos, modname.end());		
-		end_pos = std::remove(modname.begin(), modname.end(), '\n');
-		modname.erase(end_pos, modname.end());			
-		return modname;
+	if ((pos = moddef.find(brac__delim)) != std::string::npos) {
+	    token = moddef.substr(0, pos);
+	    goto FETCH_MODNAME;
 	}
+
+	FETCH_MODNAME:
+		if( (pos = token.find(mod___delim)) !=std::string::npos) {
+			modname = token.erase(0, pos+mod___delim.length());
+			std::string::iterator end_pos = std::remove(modname.begin(), modname.end(), ' ');
+			modname.erase(end_pos, modname.end());		
+			end_pos = std::remove(modname.begin(), modname.end(), '\n');
+			modname.erase(end_pos, modname.end());			
+			return modname;
+		}
 
 	return "";
 }
 
-std::vector<std::string> Parser::extractPortsFromDef(std::string moddef) {
+std::string Parser::ReplaceAll(std::string &str, const std::string &from, const std::string &to) {
+    size_t start_pos = 0;
+    
+    if(str == "") {
+    	return str;
+    }
+
+    while((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
+    }
+    return str;
+}
+
+std::vector<Parameter *> Parser::extractParametersFromDefInternal(std::string moddef) {
+	std::smatch parametermatch;
+	std::regex regx_param("parameter(\\s+)([^\\(;]*)(\\s*);");	
+	size_t list_idx = 0, param_idx = 0;
+
+	std::string parameters_found;
+	std::string list_a_delim = ",";	
+	std::string equl_a_delim = "=";
+	std::string param = "";
+	std::string moddef_r=moddef;
+
+	std::vector<Parameter *> parameters;
+
+
+	while (std::regex_search (moddef_r, parametermatch, regx_param)) {
+		std::vector<std::string> params_unformed;	
+		for(auto x : parametermatch) {
+			std::string pline = x.str();
+			ReplaceAll(pline, "parameter", "");
+			ReplaceAll(pline, ";", "");
+
+			while((list_idx = pline.find(list_a_delim)) != std::string::npos) {
+				param = pline.substr(0, list_idx);
+				params_unformed.push_back(param);
+				pline.erase(0, list_idx+list_a_delim.length());
+			}
+			params_unformed.push_back(pline);
+
+			for(int i = 0; i < params_unformed.size(); ++i) {
+				if( (param_idx = params_unformed[i].find(equl_a_delim)) != std::string::npos ) {
+					std::string pname = params_unformed[i].substr(0, param_idx);
+					params_unformed[i].erase(0, param_idx+equl_a_delim.length());
+					parameters.push_back(new Parameter(pname, params_unformed[i]));
+				}
+			}
+			break;
+		}
+    	moddef_r = parametermatch.suffix().str();
+
+		//break;
+	}
+	return parameters;	
+}
+
+
+std::vector<Parameter *> Parser::extractParametersFromDef(std::string moddef) {
+	std::string brac_s_delim = "#(";
+	std::string brac_e_delim = ")";
+	std::string list_a_delim = ",";
+	std::string equl_a_delim = "=";
+
+	std::string moddef_real = moddef;
+
+	size_t list_begin = 0, list_end =0, list_idx =0, param_idx = 0;	
+
+	std::smatch parametermatch;
+
+	std::regex regx("#(\\s*)(\\([^\\)]*\\))");
+	std::string parameters_found="", token="", param = "";
+
+	std::vector<std::string> params_unformed;
+	std::vector<Parameter *> parameters;
+
+	
+	while (std::regex_search (moddef,parametermatch,regx)) {
+		parameters_found = parametermatch.str(0) + "\n";
+		break;
+	}
+
+	std::string::iterator end_pos = std::remove(parameters_found.begin(), parameters_found.end(), '\t');
+	parameters_found.erase(end_pos, parameters_found.end());		
+	end_pos = std::remove(parameters_found.begin(), parameters_found.end(), '\n');
+	parameters_found.erase(end_pos, parameters_found.end());	
+
+	ReplaceAll(parameters_found, "parameter", "");
+
+
+	if( (list_begin = parameters_found.find(brac_s_delim)) != std::string::npos ) {
+		list_begin += brac_s_delim.length();		
+	    token = parameters_found.substr(list_begin, parameters_found.length());
+	}
+
+	if( (list_end = token.find(brac_e_delim)) != std::string::npos) {
+	    token = token.substr(0, list_end);
+	}
+
+	while((list_idx = token.find(list_a_delim)) != std::string::npos) {
+		param = token.substr(0, list_idx);
+		params_unformed.push_back(param);
+		token.erase(0, list_idx+list_a_delim.length());
+	}
+	params_unformed.push_back(token);
+
+	for(int i = 0; i < params_unformed.size(); ++i) {
+		if( (param_idx = params_unformed[i].find(equl_a_delim)) != std::string::npos ) {
+			std::string pname = params_unformed[i].substr(0, param_idx);
+			params_unformed[i].erase(0, param_idx+equl_a_delim.length());
+			parameters.push_back(new Parameter(pname, params_unformed[i]));
+		}
+	}
+
+	return parameters;
+}
+
+std::vector<std::string > Parser::extractPortsFromDef(std::string moddef) {
 	std::string brac_s_delim = "(";
 	std::string brac_e_delim = ")";
 	std::string list_a_delim = ",";
@@ -49,15 +173,29 @@ std::vector<std::string> Parser::extractPortsFromDef(std::string moddef) {
 	std::string token;
 	std::string modname;
 	std::string port_name;
+	std::string ports = "";
+	std::smatch modmatch, portmatch;
+	std::regex regx("module([^\\)#;]+)(#\\s*\\([^;]*\\))?\\)?;");
+	std::regex regx_moddef_ports("[^#](\\([^\\)]*\\));");
 
-	std::string::iterator end_pos = std::remove(moddef.begin(), moddef.end(), '\t');
-	moddef.erase(end_pos, moddef.end());		
-	end_pos = std::remove(moddef.begin(), moddef.end(), '\n');
-	moddef.erase(end_pos, moddef.end());
+	if(std::regex_search(moddef, modmatch, regx)) {
+		std::string mod_def_match = modmatch.str(0) + "\n";
+		if(std::regex_search(mod_def_match, portmatch, regx_moddef_ports)) {
+			port_name = portmatch.str(0) + "\n";
+			//break;
+		}
+		//break;
+	}
 
-	if( (list_begin = moddef.find(brac_s_delim)) != std::string::npos ) {
+
+	std::string::iterator end_pos = std::remove(port_name.begin(), port_name.end(), '\t');
+	port_name.erase(end_pos, port_name.end());		
+	end_pos = std::remove(port_name.begin(), port_name.end(), '\n');
+	port_name.erase(end_pos, port_name.end());
+
+	if( (list_begin = port_name.find(brac_s_delim)) != std::string::npos ) {
 		list_begin += brac_s_delim.length();		
-	    token = moddef.substr(list_begin, moddef.length());
+	    token = port_name.substr(list_begin, moddef.length());
 	}
 
 	if( (list_end = token.find(brac_e_delim)) != std::string::npos) {
@@ -75,8 +213,8 @@ std::vector<std::string> Parser::extractPortsFromDef(std::string moddef) {
 	}
 	port_names.push_back(token);
 
-	return port_names;
-	
+	return port_names;	
+
 }
 
 
@@ -199,7 +337,7 @@ Port * Parser::generatePortFromModule(std::string port_name, std::string mod) {
 	}
 
 	std::cout << "  [WARNING] Couldn't find: "<<port_name << "\n";
-	std::cout << mod;
+	std::cout << mod << "\n";
 
 	return NULL;
 }
@@ -229,9 +367,8 @@ bool Parser::parse(std::string filename) {
 			if(is_recording) {
 			} else {
 				moduledef += "endmodule\n";
-				std::cout << "  [PARSER] - Module Found.\n";
 				std::smatch modulematch;
-				std::regex regx("module([^)]*)\\);");
+				std::regex regx("module([^\\)#;]+)(#\\s*\\([^;]*\\))?\\)?;");
 				std::string module_found="";
 				
 				while (std::regex_search (moduledef,modulematch,regx)) {
@@ -241,6 +378,13 @@ bool Parser::parse(std::string filename) {
 				
 				if(module_found != "") {
 					std::string modulename = extractModNameFromDef(module_found);
+					std::cout << "\r                                                                        ";
+					std::cout << "\r [INFO] Module Found - "<< modulename;
+
+					std::vector<Parameter *> parameters = extractParametersFromDef(module_found);
+					std::vector<Parameter *> internal_parameters = extractParametersFromDefInternal(moduledef);
+					if(internal_parameters.size() > 0)
+						parameters.insert(parameters.end(), internal_parameters.begin(), internal_parameters.end());					
 					std::vector<std::string> port_names = extractPortsFromDef(module_found);
 					std::vector<Port *> ports = generatePortsFromDeclaration(port_names);
 
@@ -250,7 +394,6 @@ bool Parser::parse(std::string filename) {
 							ports.push_back(P);
 						} 
 					}
-					// std::cout << "Module: " << modulename << "\n";
 					// for(int j = 0; j < ports.size(); ++j) {
 					// 	std::cout << "+Port ~ "<< ports[j]->getName() << "\n";
 					// 	std::cout << "+-----[Width ] "<< ports[j]->getWidth() << "\n";
@@ -260,7 +403,7 @@ bool Parser::parse(std::string filename) {
 					// }
 					// std::string line;
 					// std::getline(std::cin, line);
-					modules[modulename] = new Module(modulename, ports);
+					modules[modulename] = new Module(modulename, ports, parameters);
 
 				}
 
@@ -271,6 +414,7 @@ bool Parser::parse(std::string filename) {
 			moduledef += vfile[i] + "\n";
 		}
 	}
+	std::cout << "\n";
 	return true;
 }
 

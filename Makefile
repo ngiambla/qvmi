@@ -8,7 +8,7 @@ SRC = source
 INC = -Iincludes
 CFLAGS += -std=c++11
 
-_OBJS = module.o parser.o qvmi.o port.o
+_OBJS = module.o parser.o qvmi.o port.o parameter.o
 OBJS = $(patsubst %,$(BIN)/%,$(_OBJS))
 
 $(shell mkdir -p $(BIN))
@@ -29,3 +29,6 @@ $(EXE): $(OBJS)
 clean:
 	rm -f $(EXE)
 	rm -rf $(BIN)
+
+cleanut:
+	rm -f unittests/*_dut.v
