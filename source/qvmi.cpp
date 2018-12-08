@@ -2,7 +2,7 @@
 
 
 std::string usage_string 	= " Usage "; 
-std::string usage_operands 	= " [file] [module]\n";
+std::string usage_operands 	= " [file] [module1,module2,...]\n";
 enum STATUS{SUCCESS, FAIL, ERROR};
 
 std::string QVMI::generateDUTWrapper(Module * M) {

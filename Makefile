@@ -6,7 +6,7 @@ CXX = g++
 BIN = bin
 SRC = source
 INC = -Iincludes
-CFLAGS += -std=c++11
+CFLAGS += -std=c++11 -O3
 
 _OBJS = module.o parser.o qvmi.o port.o parameter.o
 OBJS = $(patsubst %,$(BIN)/%,$(_OBJS))

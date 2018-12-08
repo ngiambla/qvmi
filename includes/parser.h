@@ -27,7 +27,7 @@ class Parser {
 		std::vector<Parameter *> extractParametersFromDef(std::string moddef);
 		std::vector<Parameter *> extractParametersFromDefInternal(std::string moddef);
 		std::vector<std::string> extractPortsFromDef(std::string moddef);
-		std::vector<Port *> generatePortsFromDeclaration(std::vector<std::string> port_names);
+		std::vector<Port *> generatePortsFromDeclaration(std::vector<std::string> &port_names);
 		Port * generatePortFromModule(std::string port_name, std::string mod);
 
 	public:

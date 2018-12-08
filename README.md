@@ -68,7 +68,7 @@ This will:
 
 1.  Locate `verilogfile.v`, interpret all modules (as long as the syntax is good)
 2.  From all modules listed in the command line option (1 is still fine), each module is parsed for the required informaion
-3.  If Step 2 was successful, an wrapper is generated and the `theModuleToIsolate` is isolated and saved in the same directory as `verilogfile.v` and is saved as `theModuleToIsolate_dut.v`
+3.  If Step 2 was successful, an wrapper is generated and each module in `aModuleToIsolate,AndPossiblyAnotherModule,And...` is isolated and saved in the same directory as `verilogfile.v` and is saved as `aModuleToIsolate.v`, `AndPossiblyAnotherModule.v`, ... for all modules listed.
 4.  Else, you'll just error out (...)
 
 ## Features
