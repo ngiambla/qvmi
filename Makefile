@@ -31,4 +31,6 @@ clean:
 	rm -rf $(BIN)
 
 cleanut:
-	rm -f unittests/*_dut.v
+	rm -f unittests/dynmem/*_dut.v
+	rm -f unittests/mux512/*_dut.v
+	rm -f unittests/nes/*_dut.v
