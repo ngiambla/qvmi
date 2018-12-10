@@ -3,14 +3,25 @@
 
 std::string usage_string 	= " Usage "; 
 std::string usage_operands 	= " [file] [module1,module2,...]\n";
+std::string QVMI_MESSAGE 	= 	"//=---------------------------------------------------------------------------=//\n"\
+								"// QVMI: Quick Verilog Module Isolator                                         //\n"\
+								"//                                                                             //\n"\
+								"//      Authored By: Nicholas V. Giamblanco, 2018                              //\n"\
+								"//                                                                             //\n"\
+								"//=---------------------------------------------------------------------------=//\n\n";
 enum STATUS{SUCCESS, FAIL, ERROR};
 
 std::string QVMI::generateDUTWrapper(Module * M) {
 	
+	std::unordered_map<std::string, int> reserved_clk_map = { {"clk", 1}, {"clock",  1} };
+	std::unordered_map<std::string, int> reserved_all_map = { {"clk", 1}, {"clk2x", 1}, {"clock",  1}, {"rst", 1} , {"reset", 1} };
+
 	std::string dut_out = ""; 
 
 	std::cout 	<< "Generating Wrapper for:\n"
 				<< "  Module: " << M->getName() << "\n";
+
+	dut_out += QVMI_MESSAGE;
 
 	if(M->getParameters().size() > 0)
 		dut_out += "//Parameters for Module\n\n";
@@ -25,10 +36,12 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 	dut_out += M->getName() + "_ut (\n";
 	for(int i = 0; i < M->getPorts().size(); ++i) {
 		Port * P = M->getPorts()[i];
-		if(i < M->getPorts().size()-1)
+		if(i < M->getPorts().size()-1){
 			dut_out += "\t"+ P->getName() +",\n";	
-		else 
+		}
+		else {
 			dut_out += "\t"+ P->getName() + "\n";
+		}
 	}	
 
 	dut_out += ");\n\n";
@@ -37,70 +50,100 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 	dut_out += "// Inputs and Registers\n";
 	for(int i = 0; i < M->getInputPorts().size(); ++i) {
 		Port * P = M->getInputPorts()[i];
-		if(P->getName() != "clk" && P->getName() != "clock") {
-			dut_out += P->getType() + " " + P->getWidth() + " " + P->getName() + ";\n";
-			dut_out += "reg" + P->getWidth() + " " + P->getName() + "_reg;\n";
-		} else {
+		if(reserved_clk_map.find(P->getName()) != reserved_clk_map.end()) {
 			clkPort = P;
-			dut_out += P->getType() + " " + P->getName() + ";\n";			
 		}
+		if(reserved_all_map.find(P->getName()) == reserved_all_map.end()) {
+			dut_out += P->getType() + " " + P->getWidth() + " " + P->getName() + ";\n";
+			dut_out += "reg" + P->getWidth() + " " + P->getName() + "_reg;\n";			
+		} else {
+			dut_out += P->getType() + " " + P->getName() + ";\n";
+		}
+		// if(P->getName() != "clk" && P->getName() != "clock") {
+		// 	dut_out += P->getType() + " " + P->getWidth() + " " + P->getName() + ";\n";
+		// 	dut_out += "reg" + P->getWidth() + " " + P->getName() + "_reg;\n";
+		// } else {
+		// 	clkPort = P;
+		// 	dut_out += P->getType() + " " + P->getName() + ";\n";			
+		// }
 	}
 
 	dut_out += "\n// Outputs, Registers & Wires\n";
 	for(int i = 0; i < M->getOutputPorts().size(); ++i) {
 		Port * P = M->getOutputPorts()[i];
 		dut_out += P->getType() + " " + P->getWidth() + " " + P->getName() + ";\n";
-		if(P->getName() != "clk" && P->getName() != "clock")
-			dut_out += "reg" + P->getWidth() + " " + P->getName() + "_reg;\n";
-			dut_out += "wire" + P->getWidth() + " " + P->getName() + "_wire;\n";
+		//if(reserved_all_map.find(P->getName()) == reserved_all_map.end())
+		dut_out += "reg" + P->getWidth() + " " + P->getName() + "_reg;\n";
+		dut_out += "wire" + P->getWidth() + " " + P->getName() + "_wire;\n";
+		
+		// if(P->getName() != "clk" && P->getName() != "clock")
+		// 	dut_out += "reg" + P->getWidth() + " " + P->getName() + "_reg;\n";
+		// 	dut_out += "wire" + P->getWidth() + " " + P->getName() + "_wire;\n";			
 	}
 
 	dut_out += "\n// Assigning outputs.\n";
 	for(int i = 0; i < M->getOutputPorts().size(); ++i) {
 		Port * P = M->getOutputPorts()[i];
-		if(P->getName() != "clk" && P->getName() != "clock")
-			dut_out += "assign " + P->getName() + " = " +P->getName() +"_reg;\n";
+		//if(P->getName() != "clk" && P->getName() != "clock")
+		//	dut_out += "assign " + P->getName() + " = " +P->getName() +"_reg;\n";
+		dut_out += "assign " + P->getName() + " = " +P->getName() +"_reg;\n";
 	}
 
 	if(clkPort){
 		dut_out += "\nalways @(posedge "+clkPort->getName() +")\n\tbegin\n";
+	} else {
+		dut_out += "\nalways @(*)\n\tbegin\n";		
+	}
 		for(int i = 0; i < M->getInputPorts().size(); ++i) {
 			Port * P = M->getInputPorts()[i];
-			if(P->getName() != "clk" && P->getName() != "clock")
+			if(reserved_all_map.find(P->getName()) == reserved_all_map.end()) {
 				dut_out += "\t\t"+P->getName() + "_reg <= "+P->getName() +";\n";
+			}
+			// if(P->getName() != "clk" && P->getName() != "clock")
+			// 	dut_out += "\t\t"+P->getName() + "_reg <= "+P->getName() +";\n";			
 		}
 		for(int i = 0; i < M->getOutputPorts().size(); ++i) {
 			Port * P = M->getOutputPorts()[i];
-			if(P->getName() != "clk" && P->getName() != "clock")
-				dut_out += "\t\t"+P->getName() + "_reg <= "+P->getName() +"_wire;\n";
+			dut_out += "\t\t"+P->getName() + "_reg <= "+P->getName() +"_wire;\n";
+			
+			// if(P->getName() != "clk" && P->getName() != "clock")
+			// 	dut_out += "\t\t"+P->getName() + "_reg <= "+P->getName() +"_wire;\n";
 		}		
 		dut_out += "\tend\n\n";		
-	}
+	
 
 	int sigcount = 0;
 
 	dut_out += M->getName() + " inst1(\n";
 	for(int i = 0; i < M->getInputPorts().size(); ++i) {
 		Port * P = M->getInputPorts()[i];
-		if(P->getName() != "clk" && P->getName() != "clock")
+		if(reserved_all_map.find(P->getName()) == reserved_all_map.end()) {
 			dut_out += "\t ." + P->getName()+ "("+P->getName()+"_reg)";
-		else
+		}
+		else {
 			dut_out += "\t ." + P->getName()+ "("+P->getName()+")";
+		}
+
+		// if(P->getName() != "clk" && P->getName() != "clock")
+		// 	dut_out += "\t ." + P->getName()+ "("+P->getName()+"_reg)";
+		// else
+		// 	dut_out += "\t ." + P->getName()+ "("+P->getName()+")";
 		if(sigcount < M->getPorts().size()-1) {
 			dut_out += ",\n";
 		} else {
 			dut_out += "\n";
 		}
-
 		++sigcount;
 	}	
 
 	for(int i = 0; i < M->getOutputPorts().size(); ++i) {
 		Port * P = M->getOutputPorts()[i];
-		if(P->getName() != "clk" && P->getName() != "clock")
-			dut_out += "\t ." + P->getName()+ "("+P->getName()+"_wire)";
-		else
-			dut_out += "\t ." + P->getName()+ "("+P->getName()+")";
+		dut_out += "\t ." + P->getName()+ "("+P->getName()+"_wire)";
+
+		// if(P->getName() != "clk" && P->getName() != "clock")
+		// 	dut_out += "\t ." + P->getName()+ "("+P->getName()+"_wire)";
+		// else
+		// 	dut_out += "\t ." + P->getName()+ "("+P->getName()+")";
 		if(sigcount < M->getPorts().size()-1) {
 			dut_out += ",\n";
 		} else {

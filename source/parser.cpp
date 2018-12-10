@@ -9,6 +9,7 @@ Parser::Parser() {
 
 Module * Parser::getModule(std::string mod_name) {
 	Module * M = modules[mod_name];
+	std::cout << "Module [" << mod_name << "] was not found.\n";
 	assert(M);
 	return M;
 }
@@ -124,9 +125,12 @@ std::vector<Parameter *> Parser::extractParametersFromDef(std::string moddef) {
 	
 	while (std::regex_search (moddef,parametermatch,regx)) {
 		parameters_found = parametermatch.str(0) + "\n";
-		break;
+		goto EXTRACT;
 	}
 
+	return parameters;
+
+	EXTRACT:
 	std::string::iterator end_pos = std::remove(parameters_found.begin(), parameters_found.end(), '\t');
 	parameters_found.erase(end_pos, parameters_found.end());		
 	end_pos = std::remove(parameters_found.begin(), parameters_found.end(), '\n');
@@ -399,10 +403,7 @@ bool Parser::parse(std::string filename) {
 					std::string modulename = extractModNameFromDef(module_found);
 					std::cout << "[INFO] Module Found - "<< modulename << "\n";
 
-					std::vector<Parameter *> parameters = extractParametersFromDef(module_found);
-					std::vector<Parameter *> internal_parameters = extractParametersFromDefInternal(moduledef);
-					if(internal_parameters.size() > 0)
-						parameters.insert(parameters.end(), internal_parameters.begin(), internal_parameters.end());					
+					std::vector<Parameter *> parameters = extractParametersFromDef(module_found);				
 					std::vector<std::string> port_names = extractPortsFromDef(module_found);
 					std::vector<Port *> ports = generatePortsFromDeclaration(port_names);
 
