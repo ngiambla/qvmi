@@ -9,8 +9,10 @@ Parser::Parser() {
 
 Module * Parser::getModule(std::string mod_name) {
 	Module * M = modules[mod_name];
-	std::cout << "Module [" << mod_name << "] was not found.\n";
-	assert(M);
+	if(!M) {
+		std::cout << "Module [" << mod_name << "] was not found.\n";
+		assert(M);
+	}
 	return M;
 }
 

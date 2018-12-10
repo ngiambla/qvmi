@@ -1,14 +1,20 @@
 #include "qvmi.h"
 
 
-std::string usage_string 	= " Usage "; 
-std::string usage_operands 	= " [file] [module1,module2,...]\n";
-std::string QVMI_MESSAGE 	= 	"//=---------------------------------------------------------------------------=//\n"\
-								"// QVMI: Quick Verilog Module Isolator                                         //\n"\
-								"//                                                                             //\n"\
-								"//      Authored By: Nicholas V. Giamblanco, 2018                              //\n"\
-								"//                                                                             //\n"\
-								"//=---------------------------------------------------------------------------=//\n\n";
+std::string usage_string 	= 	" Usage "; 
+std::string usage_operands 	= 	" [file] [module1,module2,...]\n";
+std::string QVMI_MESSAGE 	= 	"//=-------------------------------------------------------------------\n"\
+								"//   ______    __   __   ___ __ __    ________     \n"\
+								"//  /_____/\\  /_/\\ /_/\\ /__//_//_/\\  /_______/\\    \n"\
+								"//  \\:::_ \\ \\ \\:\\ \\\\ \\ \\\\::\\| \\| \\ \\ \\__.::._\\/    \n"\
+								"//   \\:\\ \\ \\ \\_\\:\\ \\\\ \\ \\\\:.      \\ \\   \\::\\ \\     \n"\
+								"//    \\:\\ \\ /_ \\\\:\\_/.:\\ \\\\:.\\-/\\  \\ \\  _\\::\\ \\__  \n"\
+								"//     \\:\\_-  \\ \\\\ ..::/ / \\. \\  \\  \\ \\/__\\::\\__/\\ \n"\
+								"//      \\___|\\_\\_/\\___/_(   \\__\\/ \\__\\/\\________\\/ \n"\
+								"//=-------------------------------------------------------------------\n"\
+								"// Quick Verilog Module Isolator - Nicholas V. Giamblanco, 2018\n"\
+								"//=-------------------------------------------------------------------\n\n\n";
+
 enum STATUS{SUCCESS, FAIL, ERROR};
 
 std::string QVMI::generateDUTWrapper(Module * M) {
@@ -31,6 +37,7 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 	if(M->getParameters().size() > 0)
 		dut_out += "\n";
 
+	dut_out += "// Wrapper Definition\n";
 	dut_out += "module ";
 
 	dut_out += M->getName() + "_ut (\n";
@@ -113,7 +120,7 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 	
 
 	int sigcount = 0;
-
+	dut_out += "// Module Instantiation\n";
 	dut_out += M->getName() + " inst1(\n";
 	for(int i = 0; i < M->getInputPorts().size(); ++i) {
 		Port * P = M->getInputPorts()[i];
