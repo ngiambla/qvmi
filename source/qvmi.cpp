@@ -66,33 +66,19 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 		} else {
 			dut_out += P->getType() + " " + P->getName() + ";\n";
 		}
-		// if(P->getName() != "clk" && P->getName() != "clock") {
-		// 	dut_out += P->getType() + " " + P->getWidth() + " " + P->getName() + ";\n";
-		// 	dut_out += "reg" + P->getWidth() + " " + P->getName() + "_reg;\n";
-		// } else {
-		// 	clkPort = P;
-		// 	dut_out += P->getType() + " " + P->getName() + ";\n";			
-		// }
 	}
 
 	dut_out += "\n// Outputs, Registers & Wires\n";
 	for(int i = 0; i < M->getOutputPorts().size(); ++i) {
 		Port * P = M->getOutputPorts()[i];
 		dut_out += P->getType() + " " + P->getWidth() + " " + P->getName() + ";\n";
-		//if(reserved_all_map.find(P->getName()) == reserved_all_map.end())
 		dut_out += "reg" + P->getWidth() + " " + P->getName() + "_reg;\n";
-		dut_out += "wire" + P->getWidth() + " " + P->getName() + "_wire;\n";
-		
-		// if(P->getName() != "clk" && P->getName() != "clock")
-		// 	dut_out += "reg" + P->getWidth() + " " + P->getName() + "_reg;\n";
-		// 	dut_out += "wire" + P->getWidth() + " " + P->getName() + "_wire;\n";			
+		dut_out += "wire" + P->getWidth() + " " + P->getName() + "_wire;\n";		
 	}
 
 	dut_out += "\n// Assigning outputs.\n";
 	for(int i = 0; i < M->getOutputPorts().size(); ++i) {
 		Port * P = M->getOutputPorts()[i];
-		//if(P->getName() != "clk" && P->getName() != "clock")
-		//	dut_out += "assign " + P->getName() + " = " +P->getName() +"_reg;\n";
 		dut_out += "assign " + P->getName() + " = " +P->getName() +"_reg;\n";
 	}
 
@@ -105,16 +91,11 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 			Port * P = M->getInputPorts()[i];
 			if(reserved_all_map.find(P->getName()) == reserved_all_map.end()) {
 				dut_out += "\t\t"+P->getName() + "_reg <= "+P->getName() +";\n";
-			}
-			// if(P->getName() != "clk" && P->getName() != "clock")
-			// 	dut_out += "\t\t"+P->getName() + "_reg <= "+P->getName() +";\n";			
+			}			
 		}
 		for(int i = 0; i < M->getOutputPorts().size(); ++i) {
 			Port * P = M->getOutputPorts()[i];
 			dut_out += "\t\t"+P->getName() + "_reg <= "+P->getName() +"_wire;\n";
-			
-			// if(P->getName() != "clk" && P->getName() != "clock")
-			// 	dut_out += "\t\t"+P->getName() + "_reg <= "+P->getName() +"_wire;\n";
 		}		
 		dut_out += "\tend\n\n";		
 	
@@ -131,10 +112,6 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 			dut_out += "\t ." + P->getName()+ "("+P->getName()+")";
 		}
 
-		// if(P->getName() != "clk" && P->getName() != "clock")
-		// 	dut_out += "\t ." + P->getName()+ "("+P->getName()+"_reg)";
-		// else
-		// 	dut_out += "\t ." + P->getName()+ "("+P->getName()+")";
 		if(sigcount < M->getPorts().size()-1) {
 			dut_out += ",\n";
 		} else {
@@ -146,11 +123,6 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 	for(int i = 0; i < M->getOutputPorts().size(); ++i) {
 		Port * P = M->getOutputPorts()[i];
 		dut_out += "\t ." + P->getName()+ "("+P->getName()+"_wire)";
-
-		// if(P->getName() != "clk" && P->getName() != "clock")
-		// 	dut_out += "\t ." + P->getName()+ "("+P->getName()+"_wire)";
-		// else
-		// 	dut_out += "\t ." + P->getName()+ "("+P->getName()+")";
 		if(sigcount < M->getPorts().size()-1) {
 			dut_out += ",\n";
 		} else {
@@ -161,7 +133,6 @@ std::string QVMI::generateDUTWrapper(Module * M) {
 	dut_out += ");\n\n";
 
 	dut_out += "endmodule\n";
-	//std::cout << dut_out; 
 	
 	return dut_out;
 }
@@ -189,6 +160,8 @@ int main(int argc, char * argv[]) {
 		std::cout << usage_string+argv[0]+usage_operands;
 		exit(FAIL);
 	}
+
+	std::cout << QVMI_MESSAGE;
 
 	filename 		= argv[1];
 	modules_list 	= argv[2];
